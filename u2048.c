@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #define MAX_STRING_LEN 1000
-#define SIZE  4
+#define SIZE 4
 int board[SIZE][SIZE];
 //char out[MAX_STRING_LEN];
 char *out;                                                                      //TODO: USE A BUFFER DUDE
@@ -14,6 +14,7 @@ char *out;                                                                      
 //      - themed? can pass a param, or even a text file with equivalencies;
 //        dynamically adjust board size
 
+//TODO: init with reverse pointers in diff directions for alt boards
 void initBoard()
 {
     for (int i = 0; i < SIZE; i++) {
@@ -53,8 +54,6 @@ void addRandom()                                                                
     } while (board[i][j] != 0);
 
     int random = rand()%2; // 0 or 1
-    printf("\nrandom: %d\n", 2 * random + 2);
-    printf("board i j: %d, %d\n", i, j);
     board[i][j] = 2 * random + 2; // 2 or 4
 }
 
@@ -62,17 +61,20 @@ int moveLeft()
 {
     bool success = 0; // true if something moves
 
-    for (int col = 0; col < SIZE; col++) {
-        for (int row = 1; row < SIZE; row++) { // don't need to slide first row
-            
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 1; col < SIZE; col++) { // don't need to slide first row
+            printf("\nFor row[%d] col[%d]", row, col);
+
             // skip if no tile here                                             // TODO: necessary? checked in next step, but no action taken there
             if (!board[row][col])
                 continue;
+            printf(" (noskip)");
 
-            // advance newCol to border or first non-0
-            int newCol = col;
+            // advance newCol to border or first positive int
+            int newCol = col-1;
             while (newCol && !board[row][newCol])
                 newCol--;
+            printf(" (newCol:%d)", newCol);
 
             // move tile to newCol
             if (!board[row][newCol] || board[row][newCol] == board[row][col]) {
@@ -82,6 +84,7 @@ int moveLeft()
             }
         }
     }
+    printf("\n\n");
 
     return success;
 }
@@ -113,7 +116,7 @@ int getMove()
 
 void quit(int signum)
 {
-    printf("QUIT! Bye bye.\n");
+    printf("\n\nTERMINATED! Bye bye.\n");
     exit(signum);
 }
 
