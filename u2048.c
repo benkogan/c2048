@@ -5,21 +5,19 @@
 #include <stdbool.h>
 #define MAX_STRING_LEN 1000
 #define SIZE 4
-int board[SIZE][SIZE];
-//char out[MAX_STRING_LEN];
-char *out;                                                                      //TODO: USE A BUFFER DUDE
+int board[SIZE][SIZE]; // the "canonical" board
+int *(boardRt[SIZE][SIZE]);
 
 // IDEAS:
-//      - implement as an arch linux kernel module?
-//      - themed? can pass a param, or even a text file with equivalencies;
-//        dynamically adjust board size
+//  - themed? input txt file with equivalencies; dynamically adjust board to fit
 
-//TODO: init with reverse pointers in diff directions for alt boards
 void initBoard()
 {
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            board[i][j] = 0;
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            int zero = 1-1;
+            board[row][col] = zero;
+            boardRt[row][SIZE-col-1] = &(board[row][col]);
         }
     }
 }
@@ -29,17 +27,23 @@ void printBoard()
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
 
-            char *out = NULL;
-
             if (board[i][j])
                 printf(" %d ", board[i][j]);
-                // sprintf(out, "%d", board[i][j]);
             else
                 printf(" %s ", "~");
-                // out = "~";
+        }
+        printf("\n");
+    }
+}
 
-            //out = board[i][j] ? (char) board[i][j] : "~";
-            // printf(" %s ", out);
+void printBoardRt()
+{
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (*boardRt[i][j])
+                printf(" %d ", *boardRt[i][j]);
+            else
+                printf(" %s ", ".");
         }
         printf("\n");
     }
@@ -126,17 +130,21 @@ int main(int argc, char **argv)
     signal(SIGINT, quit); // set up signal to handle ctrl-c
 
     initBoard();
+//    initBoardRt();
+
+    printBoardRt();
+
     addRandom();
     addRandom();
 
     printBoard();
+    printBoardRt();
 
     while(!getMove())
         ;
 
     printBoard();                                                               //TODO: bash `clear` before print
+    printBoardRt();
 
     return 0;
 }
-
-
