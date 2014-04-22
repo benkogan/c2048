@@ -18,9 +18,6 @@ int *(boardRt[SIZE][SIZE]); // right moves
 int *(boardUp[SIZE][SIZE]); //    up moves
 int *(boardDn[SIZE][SIZE]); //  down moves
 
-// IDEAS:
-//  - themed? input txt file with equivalencies; dynamically adjust board to fit
-
 void initBoard()
 {
     for (int row = 0; row < SIZE; row++) { // row for canonical board
@@ -42,51 +39,26 @@ void initBoard()
     }
 }
 
-void printBoardNew(int *board[4][4], char *direction)
+// TODO: reimpliment using buffer?
+void printBoard(int *board[4][4])
 {
-    printf("PRINT BOARD NEW: %s\n", direction);
+    printf("\n2048\n\nSCORE: \n\n");
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
 
             if (*board[i][j])
-                printf(" %d ", *board[i][j]);
+                printf("%6d", *board[i][j]);
             else
-                printf(" %s ", "~");
+                printf("%6s", ".");
         }
-        printf("\n");
+        printf("\n\n");
     }
 
+    printf("\nMOVEMENT:\n   w\n a s d\n\n");
 
 }
 
-void printBoard()
-{
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-
-            if (*boardLt[i][j])
-                printf(" %d ", *boardLt[i][j]);
-            else
-                printf(" %s ", "~");
-        }
-        printf("\n");
-    }
-}
-
-void printBoardRt()
-{
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            if (*boardRt[i][j])
-                printf(" %d ", *boardRt[i][j]);
-            else
-                printf(" %s ", ".");
-        }
-        printf("\n");
-    }
-}
-
-void addRandom()                                                                //TODO: maybe more efficient way; e.g., store an array of where there are 0's
+void addRandom()
 {
     int i, j;
     do {
@@ -98,34 +70,42 @@ void addRandom()                                                                
     *boardLt[i][j] = 2 * random + 2; // 2 or 4
 }
 
-int moveLeft()
+bool move(int *board[4][4])
 {
     bool success = 0; // true if something moves
 
     for (int row = 0; row < SIZE; row++) {
         for (int col = 1; col < SIZE; col++) { // don't need to slide first row
-            printf("\nFor row[%d] col[%d]", row, col);
 
-            // skip if no tile here                                             // TODO: necessary? checked in next step, but no action taken there
-            if (!(*boardLt[row][col]))
+            // end if current location has no tile
+            if (!(*board[row][col]))
                 continue;
-            printf(" (noskip)");
 
-            // advance newCol to border or 1 before another tile, ie. a pos. int  // TODO: keep an eye on here for bugs
+            //TODO: simplify this block; 3am code is bad code lol
             int newCol = col;
-            while (newCol && !(*boardLt[row][newCol-1]))
+            for (;;) {
+                if ( !newCol || (*board[row][newCol-1] != 0 &&
+                *board[row][newCol-1] != *board[row][col]) )
+                    break;
+
                 newCol--;
-            printf(" (newCol:%d)", newCol);
+
+                if (*board[row][newCol] == *board[row][col]) // equals current
+                    break;
+            }
+
 
             // move tile to newCol
-            if (!(*boardLt[row][newCol]) || *boardLt[row][newCol] == *boardLt[row][col]) {
-                *boardLt[row][newCol] += *boardLt[row][col];
-                *boardLt[row][col] = 0;
-                success = true;                                                 //TODO: add a stopping element to prevent double mergers; either in previous loc or in newCol-1
+//          if (!(*board[row][newCol]) || *board[row][newCol] == *board[row][col]) {
+            if (newCol != col) {
+                *board[row][newCol] += *board[row][col];
+                *board[row][col] = 0;
+                //TODO: add a stopping element to prevent double mergers;
+                //      either in previous loc or in newCol-1
+                success = true;
             }
         }
     }
-    printf("\n\n");
 
     return success;
 }
@@ -134,19 +114,19 @@ int getMove()
 {
     bool success;
 
-    char move = getchar();
-    switch(move) {
-        case 119:      // 'w' key
-//            success = moveUp();
+    char direction = getchar();
+    switch(direction) {
+        case 119:      // 'w' key; up
+            success = move(boardUp);
             break;
-        case 97:       // 'a' key
-            success = moveLeft();
+        case 97:       // 'a' key; left
+            success = move(boardLt);
             break;
-        case 115:       // 's' key
-//            success = moveDown();
+        case 115:       // 's' key; down
+            success = move(boardDn);
             break;
-        case 100:       // 'd' key
-//            success = moveRight();
+        case 100:       // 'd' key; right
+            success = move(boardRt);
             break;
         default:
             success = false;
@@ -163,31 +143,21 @@ void quit(int signum)
 
 int main(int argc, char **argv)
 {
-    srand(time(NULL));
-    signal(SIGINT, quit); // set up signal to handle ctrl-c
-
-//  initBoardRt();
-//  printBoardRt();
+    srand(time(NULL));     // seed random number
+    signal(SIGINT, quit);  // set up signal to handle ctrl-c
+    system("stty cbreak"); // read user input immediately
 
     initBoard();
-    addRandom();
-    addRandom();
+    addRandom(); // first run has two random tiles; here's the first
 
-    printBoardNew(boardLt, "left");
-    printBoardNew(boardRt, "right");
-    printBoardNew(boardUp, "up");
-    printBoardNew(boardDn, "down");
-
-    while(!getMove())
-        ;
-
-//  printBoard();                                                               //TODO: bash `clear` before print
-//  printBoardRt();
-
-    printBoardNew(boardLt, "left");
-    printBoardNew(boardRt, "right");
-    printBoardNew(boardUp, "up");
-    printBoardNew(boardDn, "down");
+    // infinite loop
+    for (;;) {
+        printf("\e[1;1H\e[2J"); // clear screen
+        addRandom();
+        printBoard(boardLt);
+        while(!getMove())
+            ;
+    }
 
     return 0;
 }
