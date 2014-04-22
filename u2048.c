@@ -5,21 +5,58 @@
 #include <stdbool.h>
 #define MAX_STRING_LEN 1000
 #define SIZE 4
-int board[SIZE][SIZE]; // the "canonical" board
-int *(boardRt[SIZE][SIZE]);
+
+/*
+ * boardLt is the canonical board; all other boards reflect LEFT as their
+ * respective direction. To move a tile in any direction, it will be moved
+ * LEFT on its respective directional board.
+ *
+ * For example, "up" on the canonical board is LEFT on boardUp.
+ */
+int *(boardLt[SIZE][SIZE]); //  left moves (the "canonical" board)
+int *(boardRt[SIZE][SIZE]); // right moves
+int *(boardUp[SIZE][SIZE]); //    up moves
+int *(boardDn[SIZE][SIZE]); //  down moves
 
 // IDEAS:
 //  - themed? input txt file with equivalencies; dynamically adjust board to fit
 
 void initBoard()
 {
-    for (int row = 0; row < SIZE; row++) {
-        for (int col = 0; col < SIZE; col++) {
-            int zero = 1-1;
-            board[row][col] = zero;
-            boardRt[row][SIZE-col-1] = &(board[row][col]);
+    for (int row = 0; row < SIZE; row++) { // row for canonical board
+        for (int col = 0; col < SIZE; col++) { // col for canonical board
+
+            // create a new, empty tile
+            int *tile = (int *)malloc(sizeof(int *));
+            if (tile == NULL) {
+                perror("malloc returned NULL");
+                exit(1);
+            }
+
+            // add same tile to equivalent location in  all directional boards
+            boardLt[row][col]        = tile;
+            boardRt[row][SIZE-1-col] = boardLt[row][col];
+            boardUp[SIZE-1-col][row] = boardLt[row][col];
+            boardDn[col][SIZE-1-row] = boardLt[row][col];
         }
     }
+}
+
+void printBoardNew(int *board[4][4], char *direction)
+{
+    printf("PRINT BOARD NEW: %s\n", direction);
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+
+            if (*board[i][j])
+                printf(" %d ", *board[i][j]);
+            else
+                printf(" %s ", "~");
+        }
+        printf("\n");
+    }
+
+
 }
 
 void printBoard()
@@ -27,8 +64,8 @@ void printBoard()
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
 
-            if (board[i][j])
-                printf(" %d ", board[i][j]);
+            if (*boardLt[i][j])
+                printf(" %d ", *boardLt[i][j]);
             else
                 printf(" %s ", "~");
         }
@@ -55,10 +92,10 @@ void addRandom()                                                                
     do {
         i = rand()%4; // random number from 0 to 3
         j = rand()%4;
-    } while (board[i][j] != 0);
+    } while (*boardLt[i][j] != 0);
 
     int random = rand()%2; // 0 or 1
-    board[i][j] = 2 * random + 2; // 2 or 4
+    *boardLt[i][j] = 2 * random + 2; // 2 or 4
 }
 
 int moveLeft()
@@ -70,20 +107,20 @@ int moveLeft()
             printf("\nFor row[%d] col[%d]", row, col);
 
             // skip if no tile here                                             // TODO: necessary? checked in next step, but no action taken there
-            if (!board[row][col])
+            if (!(*boardLt[row][col]))
                 continue;
             printf(" (noskip)");
 
-            // advance newCol to border or first positive int
-            int newCol = col-1;
-            while (newCol && !board[row][newCol])
+            // advance newCol to border or 1 before another tile, ie. a pos. int  // TODO: keep an eye on here for bugs
+            int newCol = col;
+            while (newCol && !(*boardLt[row][newCol-1]))
                 newCol--;
             printf(" (newCol:%d)", newCol);
 
             // move tile to newCol
-            if (!board[row][newCol] || board[row][newCol] == board[row][col]) {
-                board[row][newCol] += board[row][col];
-                board[row][col] = 0;
+            if (!(*boardLt[row][newCol]) || *boardLt[row][newCol] == *boardLt[row][col]) {
+                *boardLt[row][newCol] += *boardLt[row][col];
+                *boardLt[row][col] = 0;
                 success = true;                                                 //TODO: add a stopping element to prevent double mergers; either in previous loc or in newCol-1
             }
         }
@@ -129,22 +166,28 @@ int main(int argc, char **argv)
     srand(time(NULL));
     signal(SIGINT, quit); // set up signal to handle ctrl-c
 
+//  initBoardRt();
+//  printBoardRt();
+
     initBoard();
-//    initBoardRt();
-
-    printBoardRt();
-
     addRandom();
     addRandom();
 
-    printBoard();
-    printBoardRt();
+    printBoardNew(boardLt, "left");
+    printBoardNew(boardRt, "right");
+    printBoardNew(boardUp, "up");
+    printBoardNew(boardDn, "down");
 
     while(!getMove())
         ;
 
-    printBoard();                                                               //TODO: bash `clear` before print
-    printBoardRt();
+//  printBoard();                                                               //TODO: bash `clear` before print
+//  printBoardRt();
+
+    printBoardNew(boardLt, "left");
+    printBoardNew(boardRt, "right");
+    printBoardNew(boardUp, "up");
+    printBoardNew(boardDn, "down");
 
     return 0;
 }
