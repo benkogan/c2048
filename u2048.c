@@ -1,9 +1,15 @@
 
+/*
+ * author: Ben Kogan <http://benkogan.com>
+ *
+ * 2048---game rules from <gabrielecirulli.github.io/2048/>.
+ */
+
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#define MAX_STRING_LEN 1000
+#define GOAL 2048
 #define SIZE 4
 
 /*
@@ -17,6 +23,23 @@ int *(boardLt[SIZE][SIZE]); //  left moves (the "canonical" board)
 int *(boardRt[SIZE][SIZE]); // right moves
 int *(boardUp[SIZE][SIZE]); //    up moves
 int *(boardDn[SIZE][SIZE]); //  down moves
+
+int score = 0;
+int win   = false;
+
+static const int QUIT = -1,
+                 LOSE =  0,
+                 WIN  =  1;
+
+int quit(int op)
+{
+    char *msg = op==1 ? "YOU WIN!": op==0 ? "GAME OVER." : "QUIT";
+
+    printf("\n\n%s\n", msg);
+    exit(0);
+}
+
+void terminate(int signum) { quit(QUIT); }
 
 void initBoard()
 {
@@ -39,10 +62,9 @@ void initBoard()
     }
 }
 
-// TODO: reimpliment using buffer?
-void printBoard(int *board[4][4])
+void printBoard(int *board[SIZE][SIZE])
 {
-    printf("\n2048\n\nSCORE: \n\n");
+    printf("\n2048\n\nSCORE: %d\n\n", score);
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
 
@@ -54,8 +76,7 @@ void printBoard(int *board[4][4])
         printf("\n\n");
     }
 
-    printf("\nMOVEMENT:\n   w\n a s d\n\n");
-
+    printf("\nMOVEMENT:\n   w\n a s d              ");
 }
 
 void addRandom()
@@ -70,41 +91,41 @@ void addRandom()
     *boardLt[i][j] = 2 * random + 2; // 2 or 4
 }
 
-bool move(int *board[4][4])
+bool move(int *b[SIZE][SIZE])
 {
-    bool success = 0; // true if something moves
+    bool success = 0;  // true if something moves
+    int marker   = -1; // marks a cell one past location of a previous merge
 
-    for (int row = 0; row < SIZE; row++) {
-        for (int col = 1; col < SIZE; col++) { // don't need to slide first row
+    for (int r = 0; r < SIZE; r++) { // rows
+        for (int col = 1; col < SIZE; col++) { // don't need to slide first col
 
-            // end if current location has no tile
-            if (!(*board[row][col]))
-                continue;
+            // skip if current location has no tile
+            if (!(*b[r][col])) continue;
 
-            //TODO: simplify this block; 3am code is bad code lol
-            int newCol = col;
-            for (;;) {
-                if ( !newCol || (*board[row][newCol-1] != 0 &&
-                *board[row][newCol-1] != *board[row][col]) )
-                    break;
+            // advance to proper merge target in new column (nCol)
+            int nCol = col;
+            while (nCol && (!*b[r][nCol-1] || *b[r][nCol-1] == *b[r][col])) {
+                nCol--;
 
-                newCol--;
-
-                if (*board[row][newCol] == *board[row][col]) // equals current
-                    break;
+                if (*b[r][nCol] == *b[r][col] || marker == nCol) break;
             }
 
+            // merge tile with target tile
+            if (nCol != col) {
 
-            // move tile to newCol
-//          if (!(*board[row][newCol]) || *board[row][newCol] == *board[row][col]) {
-            if (newCol != col) {
-                *board[row][newCol] += *board[row][col];
-                *board[row][col] = 0;
-                //TODO: add a stopping element to prevent double mergers;
-                //      either in previous loc or in newCol-1
+                if (*b[r][nCol]) {
+                    score += *b[r][nCol] += *b[r][col];
+                    marker = nCol+1;
+                    if (*b[r][nCol] == GOAL) win = true;
+                } else {
+                    *b[r][nCol] += *b[r][col];
+                }
+
+                *b[r][col] = 0;
                 success = true;
             }
         }
+        marker = -1; // reset for next row
     }
 
     return success;
@@ -112,7 +133,7 @@ bool move(int *board[4][4])
 
 int getMove()
 {
-    bool success;
+    bool success = false;
 
     char direction = getchar();
     switch(direction) {
@@ -128,36 +149,66 @@ int getMove()
         case 100:       // 'd' key; right
             success = move(boardRt);
             break;
-        default:
-            success = false;
+        case 113:       // 'q' key; quit
+            quit(QUIT);
+            break;
+ //     default:
+ //         success = false;
     }
 
     return success;
 }
 
-void quit(int signum)
+/*
+ * Check for possible moves.
+ *
+ * Return: true if no moves are possible
+ *         false if a move exists
+ */
+bool isFull()
 {
-    printf("\n\nTERMINATED! Bye bye.\n");
-    exit(signum);
+    for (int row = SIZE-1; row >= 0; row--) {
+        for (int col = SIZE-1; col >= 0; col--) {
+
+            // check tile above where there is a row above
+            if (row &&
+                    (*boardLt[row-1][col] == 0 ||
+                     *boardLt[row-1][col] == *boardLt[row][col]))
+                return false;
+
+            // check tile to left where there is a column to the left
+            if (col &&
+                    (*boardLt[row][col-1] == 0 ||
+                     *boardLt[row][col-1] == *boardLt[row][col]))
+                return false;
+        }
+    }
+
+    return true; // no possible moves found
 }
 
 int main(int argc, char **argv)
 {
-    srand(time(NULL));     // seed random number
-    signal(SIGINT, quit);  // set up signal to handle ctrl-c
-    system("stty cbreak"); // read user input immediately
+    srand(time(NULL));         // seed random number
+    signal(SIGINT, terminate); // set up signal to handle ctrl-c
+    system("stty cbreak");     // read user input immediately
 
     initBoard();
-    addRandom(); // first run has two random tiles; here's the first
+    addRandom();
 
     // infinite loop
     for (;;) {
         printf("\e[1;1H\e[2J"); // clear screen
         addRandom();
         printBoard(boardLt);
+        if (isFull()) break;
+        if (win) quit(WIN);
         while(!getMove())
             ;
     }
+
+    // board is full with no more moves; game over
+    quit(LOSE);
 
     return 0;
 }
