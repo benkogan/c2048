@@ -31,11 +31,20 @@ static const int QUIT = -1,
                  LOSE =  0,
                  WIN  =  1;
 
+void cleanUp() {
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            free(boardLt[row][col]);
+        }
+    }
+}
+
 int quit(int op)
 {
     char *msg = op==1 ? "YOU WIN!": op==0 ? "GAME OVER." : "QUIT";
 
     printf("\n\n%s\n", msg);
+    cleanUp();
     exit(0);
 }
 
@@ -52,6 +61,7 @@ void initBoard()
                 perror("malloc returned NULL");
                 exit(1);
             }
+            *tile = 0;
 
             // add same tile to equivalent location in  all directional boards
             boardLt[row][col]        = tile;
@@ -210,5 +220,6 @@ int main(int argc, char **argv)
     // board is full with no more moves; game over
     quit(LOSE);
 
+    cleanUp(); // not reached
     return 0;
 }
