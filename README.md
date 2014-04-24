@@ -5,7 +5,7 @@ u2048
 
 ## Usage
 
-Just `git clone` the repo, `cd u2048` into it, `make`, and run `./u2048` of course. Tested on Mac OS X. Will test on Arch Linux, but probably will need a few changes before it'll compile.
+Just `git clone` the repo, `cd u2048` into it, `make`, and run `./u2048` of course. Tested on Mac OS X and Arch Linux. C99.
 
 ## Method
 

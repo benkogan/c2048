@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <signal.h>
 #define GOAL 2048
 #define SIZE 4
 
@@ -19,13 +20,14 @@
  *
  * For example, "up" on the canonical board is LEFT on boardUp.
  */
-int *(boardLt[SIZE][SIZE]); //  left moves (the "canonical" board)
-int *(boardRt[SIZE][SIZE]); // right moves
-int *(boardUp[SIZE][SIZE]); //    up moves
-int *(boardDn[SIZE][SIZE]); //  down moves
+int *(boardLt[SIZE][SIZE]), //  left moves (the "canonical" board)
+    *(boardRt[SIZE][SIZE]), // right moves
+    *(boardUp[SIZE][SIZE]), //    up moves
+    *(boardDn[SIZE][SIZE]); //  down moves
 
-int score = 0;
-int win   = false;
+int score   = 0,
+    win     = false,
+   *lastAdd = 0; // address of last tile added
 
 static const int QUIT = -1,
                  LOSE =  0,
@@ -78,9 +80,12 @@ void printBoard(int *board[SIZE][SIZE])
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
 
-            if (*board[i][j])
-                printf("%6d", *board[i][j]);
-            else
+            if (*board[i][j]) {
+                if (lastAdd == board[i][j])
+                    printf("\033[036m%6d\033[0m", *board[i][j]); // with color
+                else
+                    printf("%6d", *board[i][j]);
+            } else
                 printf("%6s", ".");
         }
         printf("\n\n");
@@ -91,14 +96,15 @@ void printBoard(int *board[SIZE][SIZE])
 
 void addRandom()
 {
-    int i, j;
+    int r, c;
     do {
-        i = rand()%4; // random number from 0 to 3
-        j = rand()%4;
-    } while (*boardLt[i][j] != 0);
+        r = rand()%4; // random number from 0 to 3
+        c = rand()%4;
+    } while (*boardLt[r][c] != 0);
 
     int random = rand()%2; // 0 or 1
-    *boardLt[i][j] = 2 * random + 2; // 2 or 4
+    *boardLt[r][c] = 2 * random + 2; // 2 or 4
+    lastAdd = boardLt[r][c];
 }
 
 bool move(int *b[SIZE][SIZE])
