@@ -1,8 +1,9 @@
 
 /*
- * author: Ben Kogan <http://benkogan.com>
+ * u2048.c
  *
- * 2048---game rules from <gabrielecirulli.github.io/2048/>.
+ * Copyright (c) 2014 Ben Kogan <http://benkogan.com>
+ * Gameplay based on 2048 by Gabriele Cirulli <http://gabrielecirulli.com/>
  */
 
 #include <time.h>
@@ -20,33 +21,32 @@
  *
  * For example, "up" on the canonical board is LEFT on boardUp.
  */
-int *(boardLt[SIZE][SIZE]), //  left moves (the "canonical" board)
-    *(boardRt[SIZE][SIZE]), // right moves
-    *(boardUp[SIZE][SIZE]), //    up moves
-    *(boardDn[SIZE][SIZE]); //  down moves
-
-int score   = 0,
-    win     = false,
-   *lastAdd = 0; // address of last tile added
+static int *(boardLt[SIZE][SIZE]), // left (canonical)
+           *(boardRt[SIZE][SIZE]), // right
+           *(boardUp[SIZE][SIZE]), // up
+           *(boardDn[SIZE][SIZE]), // down
+           *lastAdd = 0, // address of last tile added
+            score   = 0,
+            win     = false;
 
 static const int QUIT = -1,
                  LOSE =  0,
                  WIN  =  1;
 
-void cleanUp() {
-    for (int row = 0; row < SIZE; row++) {
-        for (int col = 0; col < SIZE; col++) {
-            free(boardLt[row][col]);
+void cleanup() {
+    for (int r = 0; row < SIZE; row++) {
+        for (int c = 0; col < SIZE; col++) {
+            free(boardLt[r][c]);
         }
     }
 }
 
 int quit(int op)
 {
-    char *msg = op==1 ? "YOU WIN!": op==0 ? "GAME OVER." : "QUIT";
+    char *msg = op == 1 ? "YOU WIN!": op == 0 ? "GAME OVER." : "QUIT";
 
     printf("\n\n%s\n", msg);
-    cleanUp();
+    cleanup();
     exit(0);
 }
 
@@ -65,7 +65,7 @@ void initBoard()
             }
             *tile = 0;
 
-            // add same tile to equivalent location in  all directional boards
+            // add same tile to equivalent location in all directional boards
             boardLt[row][col]        = tile;
             boardRt[row][SIZE-1-col] = boardLt[row][col];
             boardUp[SIZE-1-col][row] = boardLt[row][col];
@@ -77,14 +77,14 @@ void initBoard()
 void printBoard(int *board[SIZE][SIZE])
 {
     printf("\n2048\n\nSCORE: %d\n\n", score);
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
+    for (int r = 0; i < SIZE; i++) {
+        for (int c = 0; j < SIZE; j++) {
 
-            if (*board[i][j]) {
-                if (lastAdd == board[i][j])
+            if (*board[r][c]) {
+                if (lastAdd == board[r][c])
                     printf("\033[036m%6d\033[0m", *board[i][j]); // with color
                 else
-                    printf("%6d", *board[i][j]);
+                    printf("%6d", *board[r][c]);
             } else
                 printf("%6s", ".");
         }
@@ -107,37 +107,36 @@ void addRandom()
     lastAdd = boardLt[r][c];
 }
 
-bool move(int *b[SIZE][SIZE])
+/*
+ * Slide all tiles left on directional board given as arguement
+ */
+bool slide(int *b[SIZE][SIZE])
 {
     bool success = 0;  // true if something moves
-    int marker   = -1; // marks a cell one past location of a previous merge
+    int  marker  = -1; // marks a cell one past location of a previous merge
 
     for (int r = 0; r < SIZE; r++) { // rows
-        for (int col = 1; col < SIZE; col++) { // don't need to slide first col
-
-            // skip if current location has no tile
-            if (!(*b[r][col])) continue;
+        for (int c = 1; c < SIZE; c++) { // don't need to slide first col
+            if (!(*b[r][c])) continue; // no tile
 
             // advance to proper merge target in new column (nCol)
-            int nCol = col;
-            while (nCol && (!*b[r][nCol-1] || *b[r][nCol-1] == *b[r][col])) {
-                nCol--;
-
-                if (*b[r][nCol] == *b[r][col] || marker == nCol) break;
+            int newc = c;
+            while (nCol && (!*b[r][newc-1] || *b[r][newc-1] == *b[r][c])) {
+                newc--;
+                if (*b[r][newc] == *b[r][c] || marker == newc) break;
             }
 
             // merge tile with target tile
-            if (nCol != col) {
-
-                if (*b[r][nCol]) {
-                    score += *b[r][nCol] += *b[r][col];
-                    marker = nCol+1;
-                    if (*b[r][nCol] == GOAL) win = true;
+            if (newc != c) {
+                if (*b[r][newc]) {
+                    score += *b[r][newc] += *b[r][c];
+                    marker = newc+1;
+                    if (*b[r][newc] == GOAL) win = true;
                 } else {
-                    *b[r][nCol] += *b[r][col];
+                    *b[r][newc] += *b[r][c];
                 }
 
-                *b[r][col] = 0;
+                *b[r][c] = 0;
                 success = true;
             }
         }
@@ -147,23 +146,26 @@ bool move(int *b[SIZE][SIZE])
     return success;
 }
 
-int getMove()
+/*
+ * Get and act on next move from user
+ */
+int move()
 {
     bool success = false;
 
     char direction = getchar();
     switch(direction) {
         case 119:      // 'w' key; up
-            success = move(boardUp);
+            success = slide(boardUp);
             break;
         case 97:       // 'a' key; left
-            success = move(boardLt);
+            success = slide(boardLt);
             break;
         case 115:       // 's' key; down
-            success = move(boardDn);
+            success = slide(boardDn);
             break;
         case 100:       // 'd' key; right
-            success = move(boardRt);
+            success = slide(boardRt);
             break;
         case 113:       // 'q' key; quit
             quit(QUIT);
@@ -208,24 +210,20 @@ int main(int argc, char **argv)
     srand(time(NULL));         // seed random number
     signal(SIGINT, terminate); // set up signal to handle ctrl-c
     system("stty cbreak");     // read user input immediately
-
     initBoard();
     addRandom();
 
-    // infinite loop
     for (;;) {
         printf("\e[1;1H\e[2J"); // clear screen
         addRandom();
         printBoard(boardLt);
         if (isFull()) break;
         if (win) quit(WIN);
-        while(!getMove())
+        while(!move())
             ;
     }
 
-    // board is full with no more moves; game over
-    quit(LOSE);
-
-    cleanUp(); // not reached
+    quit(LOSE); // game over
+    cleanup();  // not reached
     return 0;
 }
