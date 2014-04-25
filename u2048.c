@@ -34,8 +34,8 @@ static const int QUIT = -1,
                  WIN  =  1;
 
 void cleanup() {
-    for (int r = 0; row < SIZE; row++) {
-        for (int c = 0; col < SIZE; col++) {
+    for (int r = 0; r < SIZE; r++) {
+        for (int c = 0; c < SIZE; c++) {
             free(boardLt[r][c]);
         }
     }
@@ -54,8 +54,8 @@ void terminate(int signum) { quit(QUIT); }
 
 void initBoard()
 {
-    for (int row = 0; row < SIZE; row++) { // row for canonical board
-        for (int col = 0; col < SIZE; col++) { // col for canonical board
+    for (int r = 0; r < SIZE; r++) { // row for canonical board
+        for (int c = 0; c < SIZE; c++) { // column for canonical board
 
             // create a new, empty tile
             int *tile = (int *)malloc(sizeof(int *));
@@ -66,10 +66,10 @@ void initBoard()
             *tile = 0;
 
             // add same tile to equivalent location in all directional boards
-            boardLt[row][col]        = tile;
-            boardRt[row][SIZE-1-col] = boardLt[row][col];
-            boardUp[SIZE-1-col][row] = boardLt[row][col];
-            boardDn[col][SIZE-1-row] = boardLt[row][col];
+            boardLt[r][c]        = tile;
+            boardRt[r][SIZE-1-c] = boardLt[r][c];
+            boardUp[SIZE-1-c][r] = boardLt[r][c];
+            boardDn[c][SIZE-1-r] = boardLt[r][c];
         }
     }
 }
@@ -77,12 +77,12 @@ void initBoard()
 void printBoard(int *board[SIZE][SIZE])
 {
     printf("\n2048\n\nSCORE: %d\n\n", score);
-    for (int r = 0; i < SIZE; i++) {
-        for (int c = 0; j < SIZE; j++) {
+    for (int r = 0; r < SIZE; r++) {
+        for (int c = 0; c < SIZE; c++) {
 
             if (*board[r][c]) {
                 if (lastAdd == board[r][c])
-                    printf("\033[036m%6d\033[0m", *board[i][j]); // with color
+                    printf("\033[036m%6d\033[0m", *board[r][c]); // with color
                 else
                     printf("%6d", *board[r][c]);
             } else
@@ -119,9 +119,9 @@ bool slide(int *b[SIZE][SIZE])
         for (int c = 1; c < SIZE; c++) { // don't need to slide first col
             if (!(*b[r][c])) continue; // no tile
 
-            // advance to proper merge target in new column (nCol)
+            // advance to proper merge target in new column (newc)
             int newc = c;
-            while (nCol && (!*b[r][newc-1] || *b[r][newc-1] == *b[r][c])) {
+            while (newc && (!*b[r][newc-1] || *b[r][newc-1] == *b[r][c])) {
                 newc--;
                 if (*b[r][newc] == *b[r][c] || marker == newc) break;
             }
@@ -185,19 +185,19 @@ int move()
  */
 bool isFull()
 {
-    for (int row = SIZE-1; row >= 0; row--) {
-        for (int col = SIZE-1; col >= 0; col--) {
+    for (int r = SIZE-1; r >= 0; r--) {
+        for (int c = SIZE-1; c >= 0; c--) {
 
             // check tile above where there is a row above
-            if (row &&
-                    (*boardLt[row-1][col] == 0 ||
-                     *boardLt[row-1][col] == *boardLt[row][col]))
+            if (r &&
+                    (*boardLt[r-1][c] == 0 ||
+                     *boardLt[r-1][c] == *boardLt[r][c]))
                 return false;
 
             // check tile to left where there is a column to the left
-            if (col &&
-                    (*boardLt[row][col-1] == 0 ||
-                     *boardLt[row][col-1] == *boardLt[row][col]))
+            if (c &&
+                    (*boardLt[r][c-1] == 0 ||
+                     *boardLt[r][c-1] == *boardLt[r][c]))
                 return false;
         }
     }
