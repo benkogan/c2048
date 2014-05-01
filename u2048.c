@@ -58,7 +58,7 @@ void initBoard()
         for (int c = 0; c < SIZE; c++) { // column for canonical board
 
             // create a new, empty tile
-            int *tile = (int *)malloc(sizeof(int *));
+            int *tile = (int *)malloc(sizeof(int));
             if (tile == NULL) {
                 perror("malloc returned NULL");
                 exit(1);
