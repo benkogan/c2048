@@ -1,26 +1,25 @@
 
-/*
- * u2048.c
- *
- * Copyright (c) 2014 Ben Kogan <http://benkogan.com>
- * Gameplay based on 2048 by Gabriele Cirulli <http://gabrielecirulli.com/>
- */
+//
+// 2048.c
+//
+// Copyright (c) 2014 Ben Kogan <http://benkogan.com>
+// Gameplay based on 2048 by Gabriele Cirulli <http://gabrielecirulli.com>
+//
 
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <signal.h>
+
 #define GOAL 2048
 #define SIZE 4
 
 /*
- * boardLt is the canonical board; all other boards reflect LEFT as their
- * respective direction. To move a tile in any direction, it will be moved
- * LEFT on its respective directional board.
- *
- * For example, "up" on the canonical board is LEFT on boardUp.
+ * boardLt is the canonical board; every other board reflects boardLt in its
+ * respective direction.
  */
+
 static int *(boardLt[SIZE][SIZE]), // left (canonical)
            *(boardRt[SIZE][SIZE]), // right
            *(boardUp[SIZE][SIZE]), // up
@@ -33,7 +32,12 @@ static const int QUIT = -1,
                  LOSE =  0,
                  WIN  =  1;
 
-void cleanup() {
+/*
+ * Free boards using boardLt.
+ */
+
+void
+cleanup() {
     for (int r = 0; r < SIZE; r++) {
         for (int c = 0; c < SIZE; c++) {
             free(boardLt[r][c]);
@@ -41,8 +45,12 @@ void cleanup() {
     }
 }
 
-int quit(int op)
-{
+/*
+ * Print outcome and exit gracefully.
+ */
+
+int
+quit(int op) {
     char *msg = op == 1 ? "YOU WIN!": op == 0 ? "GAME OVER." : "QUIT";
 
     printf("\n\n%s\n", msg);
@@ -50,22 +58,38 @@ int quit(int op)
     exit(0);
 }
 
-void terminate(int signum) { quit(QUIT); }
+/*
+ * Signal handler function for SIGINT.
+ */
 
-void initBoard()
-{
+void
+terminate(int signum) {
+    quit(QUIT);
+}
+
+/*
+ * Exit with message on error.
+ */
+
+static void
+die(const char *message) {
+    perror(message);
+    exit(1);
+}
+
+/*
+ * Set up boards.
+ */
+
+void
+initBoard() {
     for (int r = 0; r < SIZE; r++) { // row for canonical board
         for (int c = 0; c < SIZE; c++) { // column for canonical board
-
-            // create a new, empty tile
-            int *tile = (int *)malloc(sizeof(int));
-            if (tile == NULL) {
-                perror("malloc returned NULL");
-                exit(1);
-            }
+            int *tile = (int *) malloc(sizeof(int));
+            if (tile == NULL) die("malloc returned NULL");
             *tile = 0;
 
-            // add same tile to equivalent location in all directional boards
+            // add tile to equivalent location in all directional boards
             boardLt[r][c]        = tile;
             boardRt[r][SIZE-1-c] = boardLt[r][c];
             boardUp[SIZE-1-c][r] = boardLt[r][c];
@@ -74,19 +98,23 @@ void initBoard()
     }
 }
 
-void printBoard(int *board[SIZE][SIZE])
-{
+/*
+ * Print the specified board.
+ */
+
+void
+printBoard(int *board[SIZE][SIZE]) {
     printf("\n2048\n\nSCORE: %d\n\n", score);
     for (int r = 0; r < SIZE; r++) {
         for (int c = 0; c < SIZE; c++) {
-
             if (*board[r][c]) {
                 if (lastAdd == board[r][c])
                     printf("\033[036m%6d\033[0m", *board[r][c]); // with color
                 else
                     printf("%6d", *board[r][c]);
-            } else
+            } else {
                 printf("%6s", ".");
+            }
         }
         printf("\n\n");
     }
@@ -94,26 +122,31 @@ void printBoard(int *board[SIZE][SIZE])
     printf("\nMOVEMENT:\n   w\n a s d              ");
 }
 
-void addRandom()
-{
+/*
+ * Add tile to random open space on board.
+ * Tile is a 2 or a 4, randomly chosen.
+ */
+
+void
+addRandom() {
     int r, c;
     do {
-        r = rand()%4; // random number from 0 to 3
+        r = rand()%4;
         c = rand()%4;
     } while (*boardLt[r][c] != 0);
-
-    int random = rand()%2; // 0 or 1
-    *boardLt[r][c] = 2 * random + 2; // 2 or 4
+    int two_or_four = 2 * rand()%2 + 2;
+    *boardLt[r][c] = two_or_four;
     lastAdd = boardLt[r][c];
 }
 
 /*
- * Slide all tiles left on directional board given as arguement
+ * Slide all tiles left on the specified board.
  */
-bool slide(int *b[SIZE][SIZE])
-{
-    bool success = 0;  // true if something moves
-    int  marker  = -1; // marks a cell one past location of a previous merge
+
+bool
+slide(int *b[SIZE][SIZE]) {
+    bool success = 0; // true if something moves
+    int marker = -1;  // marks a cell one past location of a previous merge
 
     for (int r = 0; r < SIZE; r++) { // rows
         for (int c = 1; c < SIZE; c++) { // don't need to slide first col
@@ -147,10 +180,11 @@ bool slide(int *b[SIZE][SIZE])
 }
 
 /*
- * Get and act on next move from user
+ * Get and act on next move from user.
  */
-int move()
-{
+
+int
+move() {
     bool success = false;
 
     char direction = getchar();
@@ -183,8 +217,9 @@ int move()
  * Return: true if no moves are possible
  *         false if a move exists
  */
-bool isFull()
-{
+
+bool
+isFull() {
     for (int r = SIZE-1; r >= 0; r--) {
         for (int c = SIZE-1; c >= 0; c--) {
 
@@ -201,12 +236,15 @@ bool isFull()
                 return false;
         }
     }
-
     return true; // no possible moves found
 }
 
-int main(int argc, char **argv)
-{
+/*
+ * Main.
+ */
+
+int
+main(int argc, char **argv){
     srand(time(NULL));         // seed random number
     signal(SIGINT, terminate); // set up signal to handle ctrl-c
     system("stty cbreak");     // read user input immediately
@@ -227,4 +265,3 @@ int main(int argc, char **argv)
     cleanup();  // not reached
     return 0;
 }
-

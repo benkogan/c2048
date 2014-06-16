@@ -1,6 +1,6 @@
 all:
-	gcc -std=c99 -Wall -o u2048 u2048.c
+	gcc -std=c99 -Wall -o c2048 2048.c
 debug:
-	gcc -std=c99 -g -Wall -o u2048 u2048.c
+	gcc -std=c99 -g -Wall -o c2048 2048.c
 clean:
-	rm -rf *.out *.o *.dSYM u2048
+	rm -rf *.out *.o *.dSYM c2048
