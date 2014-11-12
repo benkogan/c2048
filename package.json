@@ -1,0 +1,9 @@
+{
+  "name": "c2048",
+  "version": "0.1.0",
+  "repo": "https://github.com/benkogan/c2048",
+  "description": "2048 in C99.",
+  "keywords": ["2048", "game", "cli"],
+  "install": "make install"
+}
+
